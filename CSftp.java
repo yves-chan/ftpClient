@@ -26,26 +26,76 @@ public class CSftp {
         }
 
         //TODO: WRITE down all requirements for assignment
-        //TODO: Make exception classes
 
         //Establish a connection to an IPv4 server
         //Parse the first argument which is to connect to server
         String ipFormat = "([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})";
         //TODO: make DNS format regEx
         String DNSFormat = "([0-9])";
-        //TODO: Connect to any port, but we need a default port
-        //TODO: make sure
         if (Pattern.matches(args[0], ipFormat) || Pattern.matches(args[0], DNSFormat)) {
             //TODO: Connect to the server
             //TODO: Check for timeout
+            //TODO: Connect to any port, but we need a default port, if not specified
         } else {
             System.out.print("First Argument must be IP or DNS\n");
         }
+
 
         try {
             for (int len = 1; len > 0; ) {
                 System.out.print("csftp> ");
                 len = System.in.read(cmdString);
+
+                /*TODO:
+                Sends the username to the FTP server. The user will need to pay attention to the response code
+                to determine if the password command must be sent.
+                This typically the first command the user will enter.
+
+                FTP command to Server: USER, PASS
+                Application command: user, USERNAME
+                */
+
+                /* TODO:
+                Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email
+                address or anonymous password command must be sent.
+                This typically the second command the user will enter.
+
+                FTP command to server: PASS
+                Application command: pw, PASSWORD
+                */
+
+                /* TODO:
+                If connected, sends a QUIT to the server, and closes any established connection
+                and then exits the program. This command is valid at any time.
+
+                FTP command: QUIT
+                Application command: quit
+                */
+
+                /* TODO:
+                Establishes a data connection and retrieves the file indicated by REMOTE,
+                saving it in a file of the same name on the local machine.
+
+                FTP command: PASV, RETR
+                Application command: get REMOTE
+                */
+
+                /* TODO:
+                Changes the current working directory on the server to the directory indicated by DIRECTORY.
+
+                FTP command: CWD
+                Application Command: cd DIRECTORY
+                */
+
+                /* TODO:
+                Establishes a data connection and retrieves a list of files in the current working directory
+                on the server. The list is printed to standard output.
+
+                FTP command: PASV, LIST
+                Application command: dir
+                */
+
+
                 if (len <= 0)
                     break;
                 // Start processing the command here.
