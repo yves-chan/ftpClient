@@ -1,6 +1,10 @@
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.lang.System;
 import java.io.IOException;
+import java.net.Socket;
 import java.util.regex.Pattern;
 
 //
@@ -15,6 +19,10 @@ public class CSftp {
 
     public static void main(String[] args) {
         byte cmdString[] = new byte[MAX_LEN];
+        PrintWriter out;
+        BufferedReader reader;
+        BufferedReader stdIn;
+        Socket ftpSocket;
 
         // Get command line arguments and connected to FTP
         // If the arguments are invalid or there aren't enough of them
@@ -24,20 +32,37 @@ public class CSftp {
             System.out.print("Usage: cmd ServerAddress ServerPort\n");
             return;
         }
-
-        //TODO: WRITE down all requirements for assignment
-
         //Establish a connection to an IPv4 server
         //Parse the first argument which is to connect to server
         String ipFormat = "([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})";
-        //TODO: make DNS format regEx
-        String DNSFormat = "([0-9])";
-        if (Pattern.matches(args[0], ipFormat) || Pattern.matches(args[0], DNSFormat)) {
-            //TODO: Connect to the server
-            //TODO: Check for timeout
-            //TODO: Connect to any port, but we need a default port, if not specified
+        String DNSFormat = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])";
+        if (Pattern.matches(ipFormat, args[0]) || Pattern.matches(DNSFormat, args[0])) {
+            String hostname = args[0];
+            int portNumber = (args[1] == null)? 21 : Integer.parseInt(args[1]);
+            try {
+                //TODO: Check for timeout
+                //Connect to the ftp using hostname, port number
+                ftpSocket = new Socket(hostname, portNumber);
+
+                //Get the socket output stream
+                out = new PrintWriter(ftpSocket.getOutputStream(),true);
+                //get the socket input stream
+                reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
+                // To send data to socket
+                stdIn = new BufferedReader(new InputStreamReader(System.in));
+
+                String userInput;
+                while ((userInput = stdIn.readLine()) != null) {
+                    out.println(userInput);
+                    System.out.println("echo: " + reader.readLine());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         } else {
             System.out.print("First Argument must be IP or DNS\n");
+            return;
         }
 
 
