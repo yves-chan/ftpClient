@@ -1,9 +1,6 @@
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.lang.System;
-import java.io.IOException;
 import java.net.Socket;
 import java.util.regex.Pattern;
 
@@ -117,13 +114,39 @@ Application command: dir
     private static void showDir(PrintWriter out, BufferedReader reader) {
     }
 
-    /* TODO:
+    /*
 Changes the current working directory on the server to the directory indicated by DIRECTORY.
 
 FTP command: CWD
 Application Command: cd DIRECTORY
 */
+
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+        String currentDir = System.getProperty("user.dir");
+
+        //change current directory if the destination directory exist as a sub directory
+        if(isDirectoryAccessible(currentDir, userInputArray[1])) {
+            System.setProperty("user.dir", currentDir + "/" + userInputArray[1]);
+        }
+    }
+        /*
+helper method for cdDirectory to make sure the directory you want to change it to is accessible from current directory
+*/
+
+    //return true if the destinationDir exist as a sub directory under currentDir and also it's a directory not a file
+    private static boolean isDirectoryAccessible(String currentDir, String destinationDir) {
+        File file = new File(currentDir);
+        String[] names = file.list();
+
+        for(String name : names)
+        {
+            if (new File(currentDir + "/" + name).isDirectory() && name.equals(destinationDir))
+            {
+                System.out.println(name + "\n");
+                return true;
+            }
+        }
+        return false;
     }
 
     /* TODO:
