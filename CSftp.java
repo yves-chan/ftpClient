@@ -93,8 +93,6 @@ public class CSftp {
                         }
 
                     }
-
-
                     if (len <= 0)
                         break;
 
