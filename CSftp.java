@@ -14,10 +14,6 @@ import java.util.regex.Pattern;
 public class CSftp {
     private static final int MAX_LEN = 255;
     private static final int ARG_CNT = 2;
-    private static String temp;
-    private static String[] userInputArray;
-    private static String[] updatedUserInputArray;
-    private static String response;
 
     private static void clearByteArray(byte[] cmdString) {
         for (int i = 0; i < cmdString.length; i++) {
@@ -62,6 +58,7 @@ public class CSftp {
 //                stdIn = new BufferedReader(new InputStreamReader(System.in));
 
             ){
+                String response;
                 while ((response = reader.readLine()) != null) {
                     System.out.print("<-- " + response + "\n");
                     if(response.startsWith("2")) {
@@ -81,13 +78,13 @@ public class CSftp {
 
                     //listens to the length of the user input string
                     len = System.in.read(cmdString);
-                    temp = new String(cmdString, Charset.forName("UTF-8"));
+                    String temp = new String(cmdString, Charset.forName("UTF-8"));
 
                     //split on 1 or many white spaces
-                    userInputArray = temp.split("\\s+");
+                    String[] userInputArray = temp.split("\\s+");
                     //userInputArray gives empty string at the end, so make a copy of the array
                     // with last element in the array(which is an empty string) removed
-                    updatedUserInputArray = new String[userInputArray.length - 1];
+                    String[] updatedUserInputArray = new String[userInputArray.length - 1];
                     System.arraycopy(userInputArray, 0, updatedUserInputArray, 0, userInputArray.length - 1);
 
                     switch (updatedUserInputArray[0].toLowerCase()) {
@@ -109,18 +106,22 @@ public class CSftp {
 
                         case "get" :
                             getRemote(updatedUserInputArray, out, reader);
+                            clearByteArray(cmdString);
                             break;
 
                         case "cd" :
                             cdDirectory(updatedUserInputArray, out, reader);
+                            clearByteArray(cmdString);
                             break;
 
                         case "dir" :
                             showDir(out, reader);
+                            clearByteArray(cmdString);
                             break;
 
                         case "":
                             System.out.println("\n");
+                            clearByteArray(cmdString);
                             break;
 
                         default:
@@ -152,6 +153,46 @@ Application command: dir
 */
     private static void showDir(PrintWriter out, BufferedReader reader) {
 
+        System.out.print("--> PASV"+"\n");
+        out.println("PASV");
+
+        try {
+            String PASVresponse = reader.readLine();
+
+            String responseCode = PASVresponse.substring(0, 3);
+
+            //processResponseCode();
+
+            System.out.println("<-- " + PASVresponse);
+            //if return from PASV is 227, then parse ip and port
+            PASVresponse = PASVresponse.split("[\\(\\)]")[1];
+            String[] PASVresponseIP = PASVresponse.split(",");
+            String PASV_IP = PASVresponseIP[0]+"."+PASVresponseIP[1]+"."+PASVresponseIP[2]+"."+
+                    PASVresponseIP[3];
+            int PASV_PORT = Integer.parseInt(PASVresponseIP[4])*256+Integer.parseInt(PASVresponseIP[5]);
+
+            System.out.println(PASV_IP + ":" +PASV_PORT);
+
+            Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
+            //Get the socket output stream
+            PrintWriter PASVout = new PrintWriter(PASVsocket.getOutputStream(),true);
+            //get the socket input stream
+            BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+
+            if (PASVsocket.isConnected()) {
+                System.out.print("--> LIST" + "\n");
+                PASVout.println("LIST");
+
+                String LISTresponse;
+                while ((LISTresponse = PASVreader.readLine()) != null) {
+                    System.out.println("--> " + LISTresponse);
+                }
+//                reader.close();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -181,6 +222,42 @@ FTP command: PASV, RETR
 Application command: get REMOTE
 */
     private static void getRemote(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+        System.out.print("--> PASV"+"\n");
+        out.println("PASV");
+
+        try {
+            String PASVresponse = reader.readLine();
+
+            String responseCode = PASVresponse.substring(0, 3);
+
+            //processResponseCode();
+
+            System.out.println("<-- " + PASVresponse);
+            //if return from PASV is 227, then parse ip and port
+            PASVresponse = PASVresponse.split("[\\(\\)]")[1];
+            String[] PASVresponseIP = PASVresponse.split(",");
+            String PASV_IP = PASVresponseIP[0]+"."+PASVresponseIP[1]+"."+PASVresponseIP[2]+"."+
+                    PASVresponseIP[3];
+            int PASV_PORT = Integer.parseInt(PASVresponseIP[4])*256+Integer.parseInt(PASVresponseIP[5]);
+
+            System.out.println(PASV_IP + ":" +PASV_PORT);
+
+            Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
+            //Get the socket output stream
+            PrintWriter PASVout = new PrintWriter(PASVsocket.getOutputStream(),true);
+            //get the socket input stream
+            BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+
+            if (PASVsocket.isConnected()) {
+                System.out.print("--> RETR" + userInputArray[1] + "\n");
+                PASVout.println("RETR " + userInputArray[1]);
+
+                //TODO: Download file
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /* TODO:
@@ -218,7 +295,6 @@ Application command: pw
             //      and then we can just System.out.println("<-- " + response) outside
             //
             System.out.println("<-- " + response);
-//                reader.close();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -237,7 +313,7 @@ Application command: user, USERNAME
     private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
 
         if(userInputArray.length != 2) {
-            System.out.print("invalid username" + "\n");
+            System.out.print("Invalid Username" + "\n");
         } else {
             System.out.print("--> USER " + userInputArray[1] + "\n");
             out.println("USER " + userInputArray[1]);
