@@ -65,21 +65,22 @@ public class CSftp {
                     }
 
                     System.out.print("csftp> ");
-                    //len = System.in.read(cmdString);
-                    String userInput;
+                    len = System.in.read(cmdString);
+                    String userInput = new String(cmdString);
                     String[] userInputArray;
-                    if ((userInput = stdIn.readLine()) != null) {
+                    if (userInput.length() != 0) {
                         userInputArray = userInput.split(" ");
-
 
                         switch (userInputArray[0].toLowerCase()) {
                             case "user" :
                                 // Login as user, pass user input array for args
                                 logIn(userInputArray, out, reader, ftpSocket);
+                                cmdString = new byte[MAX_LEN];
                                 break;
 
                             case "pw" :
                                 enterPassword(userInputArray, out, reader, ftpSocket);
+                                cmdString = new byte[MAX_LEN];
                                 break;
 
                             case "quit" :
@@ -181,12 +182,11 @@ FTP command to server: PASS
 Application command: pw
 */
     private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
-        System.out.print("--> PASS " + userInputArray[1] + "\n");
+        System.out.print("--> PASS " + userInputArray[1]);
         out.println("PASS " + userInputArray[1]);
 
         try {
-            reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
-            if(reader.ready()) {
+            if (reader.readLine() != null) {
                 String response = reader.readLine();
 
 
@@ -200,7 +200,7 @@ Application command: pw
                 //      and then we can just System.out.println("<-- " + response) outside
                 //
                 System.out.println("<-- " + response);
-//                reader.close();
+//                reader.close()
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -219,17 +219,16 @@ Application command: user, USERNAME
     private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
 
         if(userInputArray.length != 2) {
-            System.out.print("invalid username" + "\n");
+            System.out.print("invalid username");
         } else {
-            System.out.print("--> USER " + userInputArray[1] + "\n");
+            System.out.print("--> USER " + userInputArray[1]);
             out.println("USER " + userInputArray[1]);
 
             try {
-                reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
-                if(reader.ready()) {
+                if (reader.readLine() != null) {
                     String response = reader.readLine();
 
-                    String responseCode = response.substring(0,3);
+                    String responseCode = response.substring(0, 3);
 
                     //Todo:
                     // processResponse(String responseCode) to handle all the server response
@@ -240,11 +239,7 @@ Application command: user, USERNAME
                     //
 
                     System.out.println("<-- " + response);
-
-//                    reader.close();
                 }
-
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
