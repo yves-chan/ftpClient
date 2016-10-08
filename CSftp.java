@@ -131,6 +131,31 @@ FTP command: PASV, LIST
 Application command: dir
 */
     private static void showDir(PrintWriter out, BufferedReader reader) {
+        out.println("PASV");
+
+        try {
+            String response = reader.readLine();
+            System.out.println("--> " + response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // response includes the port number the client is to establish a data connection on
+        // Todo: create a new socket to use the same server + different port to establish the data connection
+        //Once the client establishes the data connection the file is transferred.
+        // If the ftp client tries to make a data connection to the server and the socket can't be
+        // created or a connection isn't established within a reasonable time (say 30 seconds)
+        // then the attempt to establish the connection should be abandoned, sockets etc closed/destroyed,
+        // the 930 message printed.
+
+
+        out.println("LIST");
+
+        try {
+            String response = reader.readLine();
+            System.out.println("--> " + response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -171,6 +196,16 @@ FTP command: QUIT
 Application command: quit
 */
     private static void quit(PrintWriter out, BufferedReader reader) {
+        System.out.print("--> QUIT" + "\n");
+        out.println("QUIT");
+
+        try {
+            String response = reader.readLine();
+            System.out.print(response + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /* TODO:
