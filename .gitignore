@@ -3,6 +3,7 @@ c/http_client
 
 # idea
 .idea/
+out/
 
 *.o
 *.ko

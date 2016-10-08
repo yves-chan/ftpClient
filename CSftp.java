@@ -53,20 +53,33 @@ public class CSftp {
                 //TODO: Need a check for logged into FTP before doing other commands
 
                 for (int len = 1; len > 0; ) {
+                    if(ftpSocket == null) {
+                        ftpSocket = new Socket(hostname, portNumber);
+
+                        //Get the socket output stream
+                        out = new PrintWriter(ftpSocket.getOutputStream(),true);
+                        //get the socket input stream
+                        reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
+                        // To send data to socket
+                        stdIn = new BufferedReader(new InputStreamReader(System.in));
+                    }
+
                     System.out.print("csftp> ");
                     //len = System.in.read(cmdString);
                     String userInput;
                     String[] userInputArray;
                     if ((userInput = stdIn.readLine()) != null) {
                         userInputArray = userInput.split(" ");
+
+
                         switch (userInputArray[0].toLowerCase()) {
                             case "user" :
                                 // Login as user, pass user input array for args
-                                logIn(userInputArray, out, reader);
+                                logIn(userInputArray, out, reader, ftpSocket);
                                 break;
 
                             case "pw" :
-                                enterPassword(userInputArray, out, reader);
+                                enterPassword(userInputArray, out, reader, ftpSocket);
                                 break;
 
                             case "quit" :
@@ -84,6 +97,11 @@ public class CSftp {
                             case "dir" :
                                 showDir(out, reader);
                                 break;
+
+                            case "":
+                                System.out.println("\n");
+                                break;
+
                             default:
                                 // Start processing the command here.
                                 System.out.println("900 Invalid command.");
@@ -112,9 +130,11 @@ FTP command: PASV, LIST
 Application command: dir
 */
     private static void showDir(PrintWriter out, BufferedReader reader) {
+
+
     }
 
-    /*
+    /* TODO:
 Changes the current working directory on the server to the directory indicated by DIRECTORY.
 
 FTP command: CWD
@@ -122,31 +142,14 @@ Application Command: cd DIRECTORY
 */
 
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
-        String currentDir = System.getProperty("user.dir");
+        out.println("CWD " + userInputArray[1]);
 
-        //change current directory if the destination directory exist as a sub directory
-        if(isDirectoryAccessible(currentDir, userInputArray[1])) {
-            System.setProperty("user.dir", currentDir + "/" + userInputArray[1]);
+        try {
+            String response = reader.readLine();
+            System.out.println("--> " + response);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
-        /*
-helper method for cdDirectory to make sure the directory you want to change it to is accessible from current directory
-*/
-
-    //return true if the destinationDir exist as a sub directory under currentDir and also it's a directory not a file
-    private static boolean isDirectoryAccessible(String currentDir, String destinationDir) {
-        File file = new File(currentDir);
-        String[] names = file.list();
-
-        for(String name : names)
-        {
-            if (new File(currentDir + "/" + name).isDirectory() && name.equals(destinationDir))
-            {
-                System.out.println(name + "\n");
-                return true;
-            }
-        }
-        return false;
     }
 
     /* TODO:
@@ -175,9 +178,34 @@ address or anonymous password command must be sent.
 This typically the second command the user will enter.
 
 FTP command to server: PASS
-Application command: pw, PASSWORD
+Application command: pw
 */
-    private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+    private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
+        System.out.print("--> PASS " + userInputArray[1] + "\n");
+        out.println("PASS " + userInputArray[1]);
+
+        try {
+            reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
+            if(reader.ready()) {
+                String response = reader.readLine();
+
+
+                String responseCode = response.substring(0, 3);
+
+                //Todo:
+                // processResponse(String responseCode) to handle all the server response
+                // Output: Boolean
+                //         if any one of the bad ones => print the error statements inside this method e.g. 900 , 901, and so on
+                //         if any one of the good ones => you return true or something
+                //      and then we can just System.out.println("<-- " + response) outside
+                //
+                System.out.println("<-- " + response);
+//                reader.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /*TODO:
@@ -188,12 +216,77 @@ This typically the first command the user will enter.
 FTP command to Server: USER, PASS
 Application command: user, USERNAME
 */
-    private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader) {
-        out.println(userInputArray[0]);
-        try {
-            System.out.println("--> " + reader.readLine());
-        } catch (IOException e) {
-            e.printStackTrace();
+    private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
+
+        if(userInputArray.length != 2) {
+            System.out.print("invalid username" + "\n");
+        } else {
+            System.out.print("--> USER " + userInputArray[1] + "\n");
+            out.println("USER " + userInputArray[1]);
+
+            try {
+                reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
+                if(reader.ready()) {
+                    String response = reader.readLine();
+
+                    String responseCode = response.substring(0,3);
+
+                    //Todo:
+                    // processResponse(String responseCode) to handle all the server response
+                    // Output: Boolean
+                    //         if any one of the bad ones => print the error statements inside this method e.g. 900 , 901, and so on
+                    //         if any one of the good ones => you return true or something
+                    //      and then we can just System.out.println("<-- " + response) outside
+                    //
+
+                    System.out.println("<-- " + response);
+
+//                    reader.close();
+                }
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         }
+
     }
+
+//    private static boolean processResponse(String responseCode) {
+//
+//        switch (responseCode) {
+//            case "331" :
+//                System.out.print("User name okay, need password.");
+//                break;
+//
+//            case "332" :
+//                break;
+//
+//            case "333" :
+//                break;
+//
+//            case "334" :
+//                break;
+//
+//            case "335" :
+//                break;
+//
+//            case "336" :
+//                break;
+//
+//            case "332" :
+//                break;
+//
+//            case "332" :
+//                break;
+//
+//            case "332" :
+//                break;
+//
+//            case "332" :
+//                break;
+//        }
+//
+//    }
 }
