@@ -85,10 +85,25 @@ public class CSftp {
 
                     //userInputArray gives empty string at the end, so make a copy of the array
                     // with last element in the array(which is an empty string) removed
-                    String[] updatedUserInputArray = new String[userInputArray.length - 1];
-                    System.arraycopy(userInputArray, 0, updatedUserInputArray, 0, userInputArray.length - 1);
 
-                    String command = updatedUserInputArray[0].toLowerCase();
+                    String[] updatedUserInputArray;
+//                    String[] updatedUserInputArray = new String[userInputArray.length - 1];
+                    int size = userInputArray.length;
+
+
+
+                    if (userInputArray[0].equals("")) {
+                        updatedUserInputArray = new String[userInputArray.length - 2];
+                        System.arraycopy(userInputArray, 1, updatedUserInputArray, 0, userInputArray.length - 2);
+                    } else {
+                        updatedUserInputArray = new String[userInputArray.length - 1];
+                        System.arraycopy(userInputArray, 0, updatedUserInputArray, 0, userInputArray.length - 1);
+                    }
+
+                    String command = "";
+                    if(updatedUserInputArray.length != 0) {
+                        command = updatedUserInputArray[0].toLowerCase();
+                    }
 
                     switch (command) {
                         case "user" :
