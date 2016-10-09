@@ -282,12 +282,18 @@ Application command: get REMOTE
                             if (!file.exists()) {
                                 file.createNewFile();
                             }
-                            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+                            try {
+                                BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
 
-                            while ((RETRresponse = PASVreader.readLine()) != null ) {
-                                bw.write(RETRresponse);
+                                while ((RETRresponse = PASVreader.readLine()) != null ) {
+                                    bw.write(RETRresponse);
+                                    bw.newLine();
+                                }
+                                bw.flush();
+
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
                             }
-                            bw.close();
                             System.out.println("<-- " + reader.readLine());
                         } else {
                             System.out.println("930 Data transfer connection to " + PASV_IP + " on port " + PASV_PORT+" failed to open");
