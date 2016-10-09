@@ -66,7 +66,7 @@ public class CSftp {
                         }
                         break;
                     } else if (response.startsWith("4")) {
-                        System.err.println("920 Control connection to " + hostName + " on port " +
+                        System.out.println("920 Control connection to " + hostName + " on port " +
                                 portNumber + " failed to open.");
                     }
                 }
@@ -88,7 +88,9 @@ public class CSftp {
                     String[] updatedUserInputArray = new String[userInputArray.length - 1];
                     System.arraycopy(userInputArray, 0, updatedUserInputArray, 0, userInputArray.length - 1);
 
-                    switch (updatedUserInputArray[0].toLowerCase()) {
+                    String command = updatedUserInputArray[0].toLowerCase();
+
+                    switch (command) {
                         case "user" :
                             if (checkArgs(2, updatedUserInputArray)) {
                                 logIn(updatedUserInputArray, out, reader);
@@ -141,9 +143,9 @@ public class CSftp {
 
                         default:
                             // Start processing the command here.
-                            if (updatedUserInputArray[0].toLowerCase().equals("") || updatedUserInputArray[0].toLowerCase().startsWith("#"))
+                            if (command.equals("") || command.startsWith("#"))
                                 break;
-                            System.err.println("900 Invalid command.");
+                            System.out.println("900 Invalid command.");
                     }
 
                     if (len <= 0)
@@ -151,7 +153,7 @@ public class CSftp {
 
                 }
             } catch (IOException exception) {
-                System.err.println("920 Control connection to "+ hostName+" on port "+portNumber+" failed to open");
+                System.out.println("920 Control connection to "+ hostName+" on port "+portNumber+" failed to open");
                 System.exit(1);
 
             }
@@ -212,7 +214,7 @@ public class CSftp {
             }
 
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
 
@@ -237,7 +239,7 @@ public class CSftp {
             }
 
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
     }
@@ -299,18 +301,18 @@ public class CSftp {
                                 bw.flush();
                                 System.out.println("<-- " + reader.readLine());
                             } catch (Exception e) {
-                                System.err.println("935 Data transfer connection I/O error, closing data connection");
+                                System.out.println("935 Data transfer connection I/O error, closing data connection");
                                 return;
                             }
                         }
                     }
                 } catch (IOException e) {
-                    System.err.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
+                    System.out.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
                     return;
                 }
             }
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
     }
@@ -333,7 +335,7 @@ public class CSftp {
                 System.exit(0);
             }
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
 
@@ -360,7 +362,7 @@ public class CSftp {
             }
 
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
 
@@ -386,7 +388,7 @@ public class CSftp {
             }
 
         } catch (IOException e) {
-            System.err.println("998 Input error while reading commands, terminating.");
+            System.out.println("998 Input error while reading commands, terminating.");
             System.exit(1);
         }
     }
@@ -397,7 +399,7 @@ public class CSftp {
     */
     private static boolean checkArgs(int i, String[] input) {
         if (i != input.length) {
-            System.err.println("901 Incorrect number of arguments");
+            System.out.println("901 Incorrect number of arguments");
             return false;
         }
         return true;
@@ -410,55 +412,55 @@ public class CSftp {
         switch (responseCode) {
             //Requested file action not taken.
             case "450":
-                System.err.println("910 Access to local file " + userInputArray[1]+" denied.");
+                System.out.println("910 Access to local file " + userInputArray[1]+" denied.");
                 return false;
 
             //Requested action aborted. Local error in processing.
             case "451":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             // Could Not Connect to Server - Policy Requires SSL
             case "534":
-                System.err.println("920 Control connection to " + hostName + " on port " + portNumber +
+                System.out.println("920 Control connection to " + hostName + " on port " + portNumber +
                         " failed to open");
                 return false;
 
             //Not logged in
             case "530":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             //Fail to open file
             case "550":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             //Requested action aborted. Page type unknown.
             case "551":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             //Requested file action aborted. Exceeded storage allocation (for current directory or dataset).
             case "552":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             //Requested action not taken.Insufficient storage space in system.File unavailable (e.g., file busy).
             case "553":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             // 998 Input error while reading commands, terminating.
             // This error message is printed if an exception is thrown while the client is reading its commands
             // (i.e., standard input). After printing this message the client will terminate.
             case "452":
-                System.err.println("999 Processing error. " + response);
+                System.out.println("999 Processing error. " + response);
                 return false;
 
             // Service not available
             case "421":
-                System.err.println("925 Control connection I/O error, closing control connection.");
+                System.out.println("925 Control connection I/O error, closing control connection.");
                 System.exit(1);
                 break;
 
@@ -466,7 +468,7 @@ public class CSftp {
             // or the socket cannot be created, then print this message, replacing xxx and yyy with the
             // hostName and port number of the target ftp server you are trying to establish the control connection to,.
             case "425":
-                System.err.println("920 Control connection to " + hostName + " on port " + portNumber +
+                System.out.println("920 Control connection to " + hostName + " on port " + portNumber +
                         " failed to open");
                 System.exit(1);
                 break;
@@ -475,7 +477,7 @@ public class CSftp {
             // If at any point an error while attempting to read from, or write to, the open control connection occurs,
             // this message is to printed, and the socket closed/destroyed. The client is then to exit.
             case "426":
-                System.err.println("930 Data transfer connection to " + hostName + " on port " + portNumber +
+                System.out.println("930 Data transfer connection to " + hostName + " on port " + portNumber +
                         " failed to open");
                 System.exit(1);
                 break;
