@@ -141,6 +141,8 @@ public class CSftp {
 
                         default:
                             // Start processing the command here.
+                            if (updatedUserInputArray[0].toLowerCase().equals("") || updatedUserInputArray[0].toLowerCase().startsWith("#"))
+                                break;
                             System.err.println("900 Invalid command.");
                     }
 
