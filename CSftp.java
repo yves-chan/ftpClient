@@ -3,7 +3,6 @@ import java.io.*;
 import java.lang.System;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
@@ -85,12 +84,7 @@ public class CSftp {
 
                     //userInputArray gives empty string at the end, so make a copy of the array
                     // with last element in the array(which is an empty string) removed
-
                     String[] updatedUserInputArray;
-//                    String[] updatedUserInputArray = new String[userInputArray.length - 1];
-                    int size = userInputArray.length;
-
-
 
                     if (userInputArray[0].equals("")) {
                         updatedUserInputArray = new String[userInputArray.length - 2];
@@ -224,14 +218,14 @@ public class CSftp {
                         pasvSocket.close();
                         System.out.println("<-- " + reader.readLine());
                     }
-                } catch (SocketException e) {
-                    System.out.println("925 Control connection I/O error, closing control connection");
+                } catch (IOException e) {
+                    System.out.println("930 Data Transfer connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
                     System.exit(1);
                 }
             }
 
         } catch (IOException e) {
-            System.out.println("998 Input error while reading commands, terminating.");
+            System.out.println("988 Input error while reading commands, terminating.");
             System.exit(1);
         }
 
@@ -329,12 +323,12 @@ public class CSftp {
                                 System.out.println("<-- " + reader.readLine());
                             } catch (Exception e) {
                                 System.out.println("935 Data transfer connection I/O error, closing data connection");
-                                return;
+                                System.exit(1);
                             }
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
+                    System.out.println("930 Data Transfer connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
                     System.exit(1);
                 }
             }
