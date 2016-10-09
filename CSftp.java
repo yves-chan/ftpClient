@@ -2,6 +2,7 @@
 import java.io.*;
 import java.lang.System;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
@@ -177,24 +178,25 @@ Application command: dir
 
             System.out.println(PASV_IP + ":" +PASV_PORT);
 
+            try (
             Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
-            //Get the socket output stream
-            PrintWriter PASVout = new PrintWriter(PASVsocket.getOutputStream(),true);
             //get the socket input stream
             BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+            ) {
 
-            if (PASVsocket.isConnected()) {
-                System.out.print("--> LIST" + "\n");
-                PASVout.println("LIST");
+                if (PASVsocket.isConnected()) {
+                    System.out.print("--> LIST" + "\n");
+                    out.println("LIST");
 
-                String LISTresponse = PASVreader.readLine();
-                System.out.println("<-- " + LISTresponse);
-                System.out.println("<-- " + LISTresponse);
-
-//                while ((LISTresponse = PASVreader.readLine()) != null) {
-//                    System.out.println("<-- " + LISTresponse);
-//                }
-////                reader.close();
+                    System.out.println("<-- " + reader.readLine());
+                    String LISTresponse;
+                    while ((LISTresponse = PASVreader.readLine()) != null) {
+                        System.out.println("<-- " + LISTresponse);
+                    }
+                    System.out.println("<-- " + reader.readLine());
+                }
+            } catch (SocketException e) {
+                System.out.println("lost connection");
             }
 
         } catch (IOException e) {
