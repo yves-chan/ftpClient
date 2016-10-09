@@ -58,15 +58,18 @@ public class CSftp {
 
                 while ((response = reader.readLine()) != null) {
                     if(response.startsWith("2")) {
+
                         String responseCode = response.substring(0,3);
                         if(responseCode.equals("220")) {
                             System.out.println("Welcome to Jongrin Kim and Yves Chan's FTP client");
-                            System.out.print("<-- " + response + "\n");
+                            processIntermediaryResponse(reader,response);
+
                         }
                         break;
                     } else if (response.startsWith("4")) {
                         System.out.println("920 Control connection to " + hostName + " on port " +
                                 portNumber + " failed to open.");
+                        System.exit(1);
                     }
                 }
 
@@ -186,12 +189,12 @@ public class CSftp {
         out.println("PASV");
 
         try {
-            String PASVresponse = reader.readLine();
+            String pasvResponse = reader.readLine();
 
-            if (processResponse(PASVresponse, hostName, portNumber, userInputArray)) {
-                System.out.println("<-- " + PASVresponse);
-                PASVresponse = PASVresponse.split("[\\(\\)]")[1];
-                String[] PASVresponseIP = PASVresponse.split(",");
+            if (processResponse(pasvResponse, hostName, portNumber, userInputArray)) {
+                processIntermediaryResponse(reader, pasvResponse);
+                pasvResponse = pasvResponse.split("[\\(\\)]")[1];
+                String[] PASVresponseIP = pasvResponse.split(",");
                 String pasvIp = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
                         PASVresponseIP[3];
                 int pasvPort = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
@@ -238,14 +241,14 @@ public class CSftp {
     Application Command: cd DIRECTORY
     */
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
-        System.out.print("--> CWD" + "\n");
+        System.out.print("--> CWD " + userInputArray[1] + "\n");
         out.println("CWD " + userInputArray[1]);
 
         try {
             String response = reader.readLine();
 
             if (processResponse(response, hostName, portNumber, userInputArray)){
-                System.out.println("<-- " + response);
+                processIntermediaryResponse(reader, response);
             }
 
         } catch (IOException e) {
@@ -266,21 +269,22 @@ public class CSftp {
         out.println("TYPE I");
 
         try {
-        String typeIresponse=reader.readLine();
+            String typeIresponse=reader.readLine();
+
         if (processResponse(typeIresponse, hostName,portNumber,userInputArray)){
-            System.out.println("<-- " + typeIresponse);
+            processIntermediaryResponse(reader, typeIresponse);
             System.out.print("--> PASV"+"\n");
             out.println("PASV");
         }
 
-            String pasVresponse = reader.readLine();
+            String pasvResponse = reader.readLine();
 
-            if (processResponse(pasVresponse,hostName,portNumber,userInputArray)) {
 
-                System.out.println("<-- " + pasVresponse);
+            if (processResponse(pasvResponse,hostName,portNumber,userInputArray)) {
+                processIntermediaryResponse(reader,pasvResponse);
 
-                pasVresponse = pasVresponse.split("[\\(\\)]")[1];
-                String[] PASVresponseIP = pasVresponse.split(",");
+                pasvResponse = pasvResponse.split("[\\(\\)]")[1];
+                String[] PASVresponseIP = pasvResponse.split(",");
                 String pasvIp = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
                         PASVresponseIP[3];
                 int pasvPort = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
@@ -297,10 +301,11 @@ public class CSftp {
                         System.out.print("--> RETR " + userInputArray[1] + "\n");
                         out.println("RETR " + userInputArray[1]);
 
-                        String RETRresponse = reader.readLine();
-                        if (processResponse(RETRresponse,pasvIp,pasvPort,userInputArray)) {
+                        String retrResponse = reader.readLine();
 
-                            System.out.println("<-- " + RETRresponse);
+
+                        if (processResponse(retrResponse,pasvIp,pasvPort,userInputArray)) {
+                            processIntermediaryResponse(reader, retrResponse);
 
                             File file = new File("./" + userInputArray[1]);
                             if (!file.exists()) {
@@ -351,8 +356,9 @@ public class CSftp {
 
         try {
             String response = reader.readLine();
+
             if(processResponse(response,hostName,portNumber,userInputArray)) {
-                System.out.print(response + "\n");
+                processIntermediaryResponse(reader, response);
                 System.exit(0);
             }
         } catch (IOException e) {
@@ -379,7 +385,7 @@ public class CSftp {
             String response = reader.readLine();
 
             if(processResponse(response,hostName,portNumber,userInputArray)) {
-                System.out.println("<-- " + response);
+                processIntermediaryResponse(reader, response);
             }
 
         } catch (IOException e) {
@@ -404,8 +410,9 @@ public class CSftp {
         try {
 
             String response = reader.readLine();
+
             if (processResponse(response,hostName,portNumber,userInputArray)) {
-                System.out.println("<-- " + response);
+                processIntermediaryResponse(reader, response);
             }
 
         } catch (IOException e) {
@@ -426,6 +433,23 @@ public class CSftp {
         return true;
     }
 
+    /*
+    In the case FTP server sends multiple lines of response, process the whole response before continuing
+     */
+    private static void processIntermediaryResponse(BufferedReader reader, String response) throws IOException {
+        String code = response.substring(0,3);
+        System.out.println("<-- " + response);
+        if (response.substring(3,4).equals("-")) {
+            String intermediaryResponse;
+            while (((intermediaryResponse = reader.readLine()) != null) &&
+                    (intermediaryResponse.substring(0,4).equals(code+"-"))
+                    ) {
+                System.out.println("<-- " + intermediaryResponse);
+            }
+        }
+    }
+
+
     private static boolean processResponse(String response, String hostName, int portNumber, String[] userInputArray) {
 
         String responseCode = response.substring(0,3);
@@ -445,7 +469,8 @@ public class CSftp {
             case "534":
                 System.out.println("920 Control connection to " + hostName + " on port " + portNumber +
                         " failed to open");
-                return false;
+                System.exit(1);
+                break;
 
             //Not logged in
             case "530":
@@ -467,14 +492,12 @@ public class CSftp {
                 System.out.println("999 Processing error. " + response);
                 return false;
 
-            //Requested action not taken.Insufficient storage space in system.File unavailable (e.g., file busy).
+            //Requested action not taken. File name not allowed.
             case "553":
                 System.out.println("999 Processing error. " + response);
                 return false;
 
-            // 998 Input error while reading commands, terminating.
-            // This error message is printed if an exception is thrown while the client is reading its commands
-            // (i.e., standard input). After printing this message the client will terminate.
+            //Requested action not taken. Insufficient storage space in system.File unavailable (e.g., file busy
             case "452":
                 System.out.println("999 Processing error. " + response);
                 return false;
@@ -494,9 +517,7 @@ public class CSftp {
                 System.exit(1);
                 break;
 
-            //925 Control connection I/O error, closing control connection.
-            // If at any point an error while attempting to read from, or write to, the open control connection occurs,
-            // this message is to printed, and the socket closed/destroyed. The client is then to exit.
+            //Connection closed; transfer aborted.
             case "426":
                 System.out.println("930 Data transfer connection to " + hostName + " on port " + portNumber +
                         " failed to open");

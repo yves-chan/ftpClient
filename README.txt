@@ -1,6 +1,6 @@
 How To use:
 1. Make
-2. javac CSftp.jar <hostname> <portnumber>
+2. java -jar CSftp.jar <hostname> <portnumber>
 
 
 Application Command	Description	FTP command to server
@@ -8,8 +8,8 @@ user USERNAME
     Sends the username to the FTP server. The user will need to pay attention to the response code to determine if the
     password command must be sent. This typically the first command the user will enter.
 pw PASSWORD
-	Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email address or
-	anonymous password command must be sent. This typically the second command the user will enter.
+    Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email address or
+    anonymous password command must be sent. This typically the second command the user will enter.
 quit
     If connected, sends a QUIT to the server, and closes any established connection and then exits the program.
     This command is valid at any time.
