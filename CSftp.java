@@ -24,12 +24,6 @@ public class CSftp {
 
     public static void main(String[] args) {
         byte cmdString[] = new byte[MAX_LEN];
-//        PrintWriter out;
-//        BufferedReader reader;
-//        BufferedReader stdIn;
-//        Socket ftpSocket;
-
-
 
         // Get command line arguments and connected to FTP
         // If the arguments are invalid or there aren't enough of them
@@ -284,17 +278,14 @@ Application command: get REMOTE
 
                             System.out.println("<-- " + RETRresponse);
 
-                            File file = new File(userInputArray[1]);
+                            File file = new File("./" + userInputArray[1]);
                             if (!file.exists()) {
                                 file.createNewFile();
                             }
-                            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+                            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 
-                            int count = 0;
-                            while (PASVreader.readLine() != null) {
-                                System.out.println(count);
-                                bw.write(PASVreader.readLine());
-                                count++;
+                            while ((RETRresponse = PASVreader.readLine()) != null ) {
+                                bw.write(RETRresponse);
                             }
                             bw.close();
                             System.out.println("<-- " + reader.readLine());
