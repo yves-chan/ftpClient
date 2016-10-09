@@ -286,12 +286,15 @@ public class CSftp {
                             if (!file.exists()) {
                                 file.createNewFile();
                             }
-                            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+                            try {
+                                BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
 
                                 String fileData;
                                 while ((fileData = PASVreader.readLine()) != null) {
                                     bw.write(fileData);
+                                    bw.newLine();
                                 }
+                                bw.flush();
                                 System.out.println("<-- " + reader.readLine());
                             } catch (Exception e) {
                                 System.err.println("935 Data transfer connection I/O error, closing data connection");
@@ -301,6 +304,7 @@ public class CSftp {
                     }
                 } catch (IOException e) {
                     System.err.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
+                    return;
                 }
             }
         } catch (IOException e) {
