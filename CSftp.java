@@ -260,17 +260,29 @@ Application command: get REMOTE
 
             System.out.println(PASV_IP + ":" +PASV_PORT);
 
+            try (
             Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
-            //Get the socket output stream
-            PrintWriter PASVout = new PrintWriter(PASVsocket.getOutputStream(),true);
             //get the socket input stream
             BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+            ) {
 
-            if (PASVsocket.isConnected()) {
-                System.out.print("--> RETR" + userInputArray[1] + "\n");
-                PASVout.println("RETR " + userInputArray[1]);
+                if (PASVsocket.isConnected()) {
+                    System.out.print("--> RETR " + userInputArray[1] + "\n");
+                    out.println("RETR " + userInputArray[1]);
 
-                //TODO: Download file
+                    File file = new File(userInputArray[1]);
+                    file.createNewFile();
+                    BufferedWriter bw = new BufferedWriter(new FileWriter(file, true));
+
+                    while (PASVreader.readLine() != null) {
+                        bw.write(PASVreader.readLine());
+                    }
+                    bw.flush();
+                    bw.close();
+
+                }
+            } catch (SocketException e) {
+                System.out.println("Socket closed");
             }
 
         } catch (IOException e) {
