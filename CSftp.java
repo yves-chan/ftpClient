@@ -268,10 +268,17 @@ public class CSftp {
     Application command: get REMOTE
     */
     private static void getRemote(String[] userInputArray, PrintWriter out, BufferedReader reader, byte[] cmdString) {
-        System.out.print("--> PASV"+"\n");
-        out.println("PASV");
+        System.out.println("--> TYPE I");
+        out.println("TYPE I");
 
         try {
+        String typeIresponse=reader.readLine();
+        if (processResponse(typeIresponse, hostName,portNumber,userInputArray)){
+            System.out.println("<-- " + typeIresponse);
+            System.out.print("--> PASV"+"\n");
+            out.println("PASV");
+        }
+
             String pasVresponse = reader.readLine();
 
             if (processResponse(pasVresponse,hostName,portNumber,userInputArray)) {
@@ -328,7 +335,7 @@ public class CSftp {
                     }
                 } catch (IOException e) {
                     System.out.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
-                    return;
+                    System.exit(1);
                 }
             }
         } catch (IOException e) {
