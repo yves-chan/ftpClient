@@ -43,13 +43,12 @@ public class CSftp {
         String ipFormat = "([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})";
         String DNSFormat = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])";
         if (Pattern.matches(ipFormat, args[0]) || Pattern.matches(DNSFormat, args[0])) {
-            String hostname = args[0];
+            String hostName = args[0];
             int portNumber = (args[1] == null)? 21 : Integer.parseInt(args[1]);
             try (
                     //TODO: Check for timeout
-                    //Connect to the ftp using hostname, port number
-                    Socket ftpSocket = new Socket(hostname, portNumber);
-
+                    //Connect to the ftp using hostName, port number
+                    Socket ftpSocket = new Socket(hostName, portNumber);
                     //Get the socket output stream
                     PrintWriter out = new PrintWriter(ftpSocket.getOutputStream(),true);
                     //get the socket input stream
@@ -59,12 +58,17 @@ public class CSftp {
 
             ){
                 String response;
+                //This while loop takes care of the first socket connection response
                 while ((response = reader.readLine()) != null) {
-                    System.out.print("<-- " + response + "\n");
+
                     if(response.startsWith("2")) {
+                        String responseCode = response.substring(0,3);
+                        if(responseCode.equals("220")) {
+                            System.out.print("<-- " + "connection successful" + "\n");
+                        }
                         break;
                     } else if (response.startsWith("4")) {
-                        System.err.println("920 Control connection to " + hostname + " on port " + portNumber + " failed to open.");
+                        System.err.println("920 Control connection to " + hostName + " on port " + portNumber + " failed to open.");
                     }
                 }
 
@@ -82,6 +86,7 @@ public class CSftp {
 
                     //split on 1 or many white spaces
                     String[] userInputArray = temp.split("\\s+");
+
                     //userInputArray gives empty string at the end, so make a copy of the array
                     // with last element in the array(which is an empty string) removed
                     String[] updatedUserInputArray = new String[userInputArray.length - 1];
@@ -89,13 +94,12 @@ public class CSftp {
 
                     switch (updatedUserInputArray[0].toLowerCase()) {
                         case "user" :
-                            // Login as user, pass user input array for args
-                            logIn(updatedUserInputArray, out, reader, ftpSocket);
+                            logIn(updatedUserInputArray, out, reader);
                             clearByteArray(cmdString);
                             break;
 
                         case "pw" :
-                            enterPassword(updatedUserInputArray, out, reader, ftpSocket);
+                            enterPassword(updatedUserInputArray, out, reader);
                             clearByteArray(cmdString);
                             break;
 
@@ -183,11 +187,14 @@ Application command: dir
                 System.out.print("--> LIST" + "\n");
                 PASVout.println("LIST");
 
-                String LISTresponse;
-                while ((LISTresponse = PASVreader.readLine()) != null) {
-                    System.out.println("--> " + LISTresponse);
-                }
-//                reader.close();
+                String LISTresponse = PASVreader.readLine();
+                System.out.println("<-- " + LISTresponse);
+                System.out.println("<-- " + LISTresponse);
+
+//                while ((LISTresponse = PASVreader.readLine()) != null) {
+//                    System.out.println("<-- " + LISTresponse);
+//                }
+////                reader.close();
             }
 
         } catch (IOException e) {
@@ -204,11 +211,20 @@ Application Command: cd DIRECTORY
 */
 
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+        System.out.print("--> CWD" + "\n");
         out.println("CWD " + userInputArray[1]);
 
         try {
             String response = reader.readLine();
-            System.out.println("--> " + response);
+
+            String responseCode = response.substring(0, 3);
+
+            if(responseCode.startsWith("4")) {
+                System.out.print("925 Control connection I/O error, closing control connection.");
+                System.exit(0);
+            }
+
+            System.out.println("<-- " + response);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -268,7 +284,19 @@ FTP command: QUIT
 Application command: quit
 */
     private static void quit(PrintWriter out, BufferedReader reader) {
+        System.out.print("--> QUIT" + "\n");
+        out.println("QUIT");
+
+        try {
+            String response = reader.readLine();
+            System.out.print(response + "\n");
+            System.exit(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
+
 
     /* TODO:
 Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email
@@ -278,22 +306,20 @@ This typically the second command the user will enter.
 FTP command to server: PASS
 Application command: pw
 */
-    private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
+    private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader) {
         System.out.print("--> PASS " + userInputArray[1] + "\n");
         out.println("PASS " + userInputArray[1]);
 
         try {
             String response = reader.readLine();
-            
+
             String responseCode = response.substring(0, 3);
 
-            //Todo:
-            // processResponse(String responseCode) to handle all the server response
-            // Output: Boolean
-            //         if any one of the bad ones => print the error statements inside this method e.g. 900 , 901, and so on
-            //         if any one of the good ones => you return true or something
-            //      and then we can just System.out.println("<-- " + response) outside
-            //
+            if(responseCode.startsWith("4")) {
+                System.out.print("925 Control connection I/O error, closing control connection.");
+                System.exit(0);
+            }
+
             System.out.println("<-- " + response);
 
         } catch (IOException e) {
@@ -310,7 +336,7 @@ This typically the first command the user will enter.
 FTP command to Server: USER, PASS
 Application command: user, USERNAME
 */
-    private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader, Socket ftpSocket) {
+    private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader) {
 
         if(userInputArray.length != 2) {
             System.out.print("Invalid Username" + "\n");
@@ -321,22 +347,14 @@ Application command: user, USERNAME
             try {
 
                 String response = reader.readLine();
-
                 String responseCode = response.substring(0,3);
 
-                //Todo:
-                // processResponse(String responseCode) to handle all the server response
-                // Output: Boolean
-                //         if any one of the bad ones => print the error statements inside this method e.g. 900 , 901, and so on
-                //         if any one of the good ones => you return true or something
-                //      and then we can just System.out.println("<-- " + response) outside
-                //
+                if(responseCode.startsWith("4")) {
+                    System.out.print("925 Control connection I/O error, closing control connection.");
+                    System.exit(0);
+                }
 
                 System.out.println("<-- " + response);
-
-//                    reader.close();
-
-
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -345,45 +363,60 @@ Application command: user, USERNAME
         }
 
     }
-
-//    private static boolean processResponse(String responseCode, String hostName, String portNumber) {
+//    private static void processResponse(String response, String hostName, int portNumber) {
+//
+//        String responseCode = response.substring(0,3);
 //
 //        switch (responseCode) {
-//            case "331" :
+//            case "331":
 //                System.out.print("User name okay, need password.");
 //                break;
 //
-//
 //            //When an attempt to establish the connection can't be completed within a reasonable time (say 30 seconds),
-//            // or the socket cannot be created, then print this message, replacing xxx and yyy with the hostname and port number of the target ftp server you are trying to establish the control connection to,.
-//            case "425" :
+//            // or the socket cannot be created, then print this message, replacing xxx and yyy with the
+//            // hostName and port number of the target ftp server you are trying to establish the control connection to,.
+//            case "425":
 //                System.out.print("920 Control connection to " + hostName + " on port " + portNumber + " failed to open");
 //                break;
 //
-//            case "333" :
+//            //925 Control connection I/O error, closing control connection.
+//            // If at any point an error while attempting to read from, or write to, the open control connection occurs,
+//            // this message is to printed, and the socket closed/destroyed. The client is then to exit.
+//            case "test":
+//                System.out.print("925 Control connection I/O error, closing control connection.");
 //                break;
 //
-//            case "334" :
+//            //930 Data transfer connection to xxx on port yyy failed to open.
+//            // This message is to be printed when a data connection cannot be established within a reasonable time
+//            // (say 30 seconds) or the socket cannot be created. The xxx and yyy are to be replaced with the
+//            // hostName and port number of the target ftp server respectively.
+//            case "test2":
+//                System.out.print("930 Data transfer connection to " + hostName + " on port " + portNumber + " failed to open");
 //                break;
 //
-//            case "335" :
+//            //935 Data transfer connection I/O error, closing data connection.
+//            // If at any point an error while attempting to read (or write, but that should never be the case) from
+//            // the open data transfer connection occurs, this message is to printed, and the data transfer socket closed/destroyed.
+//            // The client is then to go back to accepting commands.
+//            // Note that this error does not trigger the closing of the command connection.
+//            case "test3":
+//                System.out.print("935 Data transfer connection I/O error, closing data connection. ");
+//                break;
+//            // 998 Input error while reading commands, terminating.
+//            // This error message is printed if an exception is thrown while the client is reading its commands
+//            // (i.e., standard input). After printing this message the client will terminate.
+//            case "test4":
+//                System.out.print("998 Input error while reading commands, terminating. ");
 //                break;
 //
-//            case "336" :
+//            // Todo: 999 Processing error. yyyy.
+//            // If for some reason you detect an error that isn't described above,
+//            // print this message and replace yyyy with some appropriate text that briefly describes the error.
+//            case "test5":
+//                System.out.print("999 Processing error. ");
 //                break;
-//
-//            case "332" :
-//                break;
-//
-//            case "332" :
-//                break;
-//
-//            case "332" :
-//                break;
-//
-//            case "332" :
-//                break;
+//            default  :
+//                System.out.println("<-- " + response);
 //        }
-//
 //    }
 }
