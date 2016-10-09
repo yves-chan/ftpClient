@@ -1,6 +1,7 @@
 
 import java.io.*;
 import java.lang.System;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
@@ -15,6 +16,10 @@ import java.util.regex.Pattern;
 public class CSftp {
     private static final int MAX_LEN = 255;
     private static final int ARG_CNT = 2;
+    private static final int DEFAULT_PORT = 21;
+    private static final int SOCKET_TIMEOUT = 30000;
+    private static String hostName;
+    private static int portNumber;
 
     private static void clearByteArray(byte[] cmdString) {
         for (int i = 0; i < cmdString.length; i++) {
@@ -36,40 +41,36 @@ public class CSftp {
         //Establish a connection to an IPv4 server
         //Parse the first argument which is to connect to server
         String ipFormat = "([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})";
-        String DNSFormat = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])";
+        String DNSFormat = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*" +
+                "([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])";
         if (Pattern.matches(ipFormat, args[0]) || Pattern.matches(DNSFormat, args[0])) {
-            String hostName = args[0];
-            int portNumber = (args[1] == null)? 21 : Integer.parseInt(args[1]);
-            try (
-                    //TODO: Check for timeout
-                    //Connect to the ftp using hostName, port number
-                    Socket ftpSocket = new Socket(hostName, portNumber);
-                    //Get the socket output stream
-                    PrintWriter out = new PrintWriter(ftpSocket.getOutputStream(),true);
-                    //get the socket input stream
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
-                    // To send data to socket
-//                stdIn = new BufferedReader(new InputStreamReader(System.in));
+            hostName = args[0];
+            portNumber = (args[1] == null)? DEFAULT_PORT : Integer.parseInt(args[1]);
+            try {
+                //Connect to the ftp using hostName, port number
+                Socket ftpSocket = new Socket();
+                ftpSocket.connect(new InetSocketAddress(hostName,portNumber), SOCKET_TIMEOUT);
+                //Get the socket output stream
+                PrintWriter out = new PrintWriter(ftpSocket.getOutputStream(),true);
+                //get the socket input stream
+                BufferedReader reader = new BufferedReader(new InputStreamReader(ftpSocket.getInputStream()));
 
-            ){
                 String response;
-                //This while loop takes care of the first socket connection response
-                while ((response = reader.readLine()) != null) {
 
+                while ((response = reader.readLine()) != null) {
                     if(response.startsWith("2")) {
                         String responseCode = response.substring(0,3);
                         if(responseCode.equals("220")) {
-                            System.out.print("<-- " + "connection successful" + "\n");
+                            System.out.println("Welcome to Jongrin Kim and Yves Chan's FTP client");
+                            System.out.print("<-- " + response + "\n");
                         }
                         break;
                     } else if (response.startsWith("4")) {
-                        System.err.println("920 Control connection to " + hostName + " on port " + portNumber + " failed to open.");
+                        System.err.println("920 Control connection to " + hostName + " on port " +
+                                portNumber + " failed to open.");
                     }
                 }
 
-                String userName;
-                String password;
-                //TODO: Need a check for logged into FTP before doing other commands
 
                 for (int len = 1; len > 0; ) {
 
@@ -89,52 +90,68 @@ public class CSftp {
 
                     switch (updatedUserInputArray[0].toLowerCase()) {
                         case "user" :
-                            logIn(updatedUserInputArray, out, reader);
-                            clearByteArray(cmdString);
+                            if (checkArgs(2, updatedUserInputArray)) {
+                                logIn(updatedUserInputArray, out, reader);
+                                clearByteArray(cmdString);
+                            }
                             break;
 
                         case "pw" :
-                            enterPassword(updatedUserInputArray, out, reader);
-                            clearByteArray(cmdString);
+                            if (checkArgs(2, updatedUserInputArray)) {
+                                enterPassword(updatedUserInputArray, out, reader);
+                                clearByteArray(cmdString);
+                            }
                             break;
 
                         case "quit" :
-                            quit(out, reader);
-                            System.exit(0);
+                            if (checkArgs(1, updatedUserInputArray)) {
+                                quit(updatedUserInputArray, out, reader);
+                                System.exit(0);
+                            }
                             break;
 
                         case "get" :
-                            getRemote(updatedUserInputArray, out, reader, cmdString);
-                            clearByteArray(cmdString);
+                            if (checkArgs(2, updatedUserInputArray)) {
+                                getRemote(updatedUserInputArray, out, reader, cmdString);
+                                clearByteArray(cmdString);
+                            }
                             break;
 
                         case "cd" :
-                            cdDirectory(updatedUserInputArray, out, reader);
-                            clearByteArray(cmdString);
+                            if (checkArgs(2, updatedUserInputArray)) {
+                                cdDirectory(updatedUserInputArray, out, reader);
+                                clearByteArray(cmdString);
+                            }
                             break;
 
                         case "dir" :
-                            showDir(out, reader, cmdString);
-                            clearByteArray(cmdString);
+                            if (checkArgs(1, updatedUserInputArray)) {
+                                showDir(updatedUserInputArray, out, reader, cmdString);
+                                clearByteArray(cmdString);
+                            }
                             break;
 
                         case "":
-                            System.out.println("\n");
+                            clearByteArray(cmdString);
+                            break;
+
+                        case "#":
                             clearByteArray(cmdString);
                             break;
 
                         default:
                             // Start processing the command here.
-                            System.out.println("900 Invalid command.");
+                            System.err.println("900 Invalid command.");
                     }
 
-//                    }
                     if (len <= 0)
                         break;
 
                 }
             } catch (IOException exception) {
-                System.err.println("998 Input error while reading commands, terminating.");
+                System.err.println("920 Control connection to "+ hostName+" on port "+portNumber+" failed to open");
+                System.exit(1);
+
             }
 
         } else {
@@ -143,14 +160,14 @@ public class CSftp {
         }
     }
 
-    /* TODO:
-Establishes a data connection and retrieves a list of files in the current working directory
-on the server. The list is printed to standard output.
+    /*
+    Establishes a data connection and retrieves a list of files in the current working directory
+    on the server. The list is printed to standard output.
 
-FTP command: PASV, LIST
-Application command: dir
-*/
-    private static void showDir(PrintWriter out, BufferedReader reader, byte[] cmdString) {
+    FTP command: PASV, LIST
+    Application command: dir
+    */
+    private static void showDir(String[] userInputArray, PrintWriter out, BufferedReader reader, byte[] cmdString) {
 
         System.out.print("--> PASV"+"\n");
         out.println("PASV");
@@ -158,29 +175,24 @@ Application command: dir
         try {
             String PASVresponse = reader.readLine();
 
-            String responseCode = PASVresponse.substring(0, 3);
-
-            //processResponseCode();
-            if (responseCode.equals("227")) {
+            if (processResponse(PASVresponse, hostName, portNumber, userInputArray)) {
                 System.out.println("<-- " + PASVresponse);
-                //if return from PASV is 227, then parse ip and port
                 PASVresponse = PASVresponse.split("[\\(\\)]")[1];
                 String[] PASVresponseIP = PASVresponse.split(",");
-                String PASV_IP = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
+                String pasvIp = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
                         PASVresponseIP[3];
-                int PASV_PORT = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
-
-                System.out.println(PASV_IP + ":" + PASV_PORT);
+                int pasvPort = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
 
                 clearByteArray(cmdString);
 
-                try (
-                        Socket PASVsocket = new Socket(PASV_IP, PASV_PORT);
-                        //get the socket input stream
-                        BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
-                ) {
+                try {
+                    Socket pasvSocket = new Socket();
+                    pasvSocket.connect(new InetSocketAddress(pasvIp, pasvPort), SOCKET_TIMEOUT);
+                    //get the socket input stream
+                    BufferedReader PASVreader = new BufferedReader(new InputStreamReader(
+                            pasvSocket.getInputStream()));
 
-                    if (PASVsocket.isConnected()) {
+                    if (pasvSocket.isConnected()) {
                         System.out.print("--> LIST" + "\n");
                         out.println("LIST");
 
@@ -193,21 +205,23 @@ Application command: dir
                     }
                 } catch (SocketException e) {
                     System.out.println("925 Control connection I/O error, closing control connection");
+                    System.exit(1);
                 }
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
 
     }
 
-    /* TODO:
-Changes the current working directory on the server to the directory indicated by DIRECTORY.
+    /*
+    Changes the current working directory on the server to the directory indicated by DIRECTORY.
 
-FTP command: CWD
-Application Command: cd DIRECTORY
-*/
+    FTP command: CWD
+    Application Command: cd DIRECTORY
+    */
 
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
         System.out.print("--> CWD" + "\n");
@@ -216,26 +230,23 @@ Application Command: cd DIRECTORY
         try {
             String response = reader.readLine();
 
-            String responseCode = response.substring(0, 3);
-
-            if(responseCode.startsWith("4")) {
-                System.out.print("925 Control connection I/O error, closing control connection.");
-                System.exit(0);
+            if (processResponse(response, hostName, portNumber, userInputArray)){
+                System.out.println("<-- " + response);
             }
 
-            System.out.println("<-- " + response);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
     }
 
     /* TODO:
-Establishes a data connection and retrieves the file indicated by REMOTE,
-saving it in a file of the same name on the local machine.
+    Establishes a data connection and retrieves the file indicated by REMOTE,
+    saving it in a file of the same name on the local machine.
 
-FTP command: PASV, RETR
-Application command: get REMOTE
-*/
+    FTP command: PASV, RETR
+    Application command: get REMOTE
+    */
     private static void getRemote(String[] userInputArray, PrintWriter out, BufferedReader reader, byte[] cmdString) {
         System.out.print("--> PASV"+"\n");
         out.println("PASV");
@@ -243,38 +254,31 @@ Application command: get REMOTE
         try {
             String PASVresponse = reader.readLine();
 
-            String responseCode = PASVresponse.substring(0, 3);
+            if (processResponse(PASVresponse,hostName,portNumber,userInputArray)) {
 
-            //processResponseCode();
+                System.out.println("<-- " + PASVresponse);
 
-            System.out.println("<-- " + PASVresponse);
-
-            //if return from PASV is 227, then parse ip and port
-            if (responseCode.equals("227")) {
                 PASVresponse = PASVresponse.split("[\\(\\)]")[1];
                 String[] PASVresponseIP = PASVresponse.split(",");
-                String PASV_IP = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
+                String pasvIp = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
                         PASVresponseIP[3];
-                int PASV_PORT = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
-
-                System.out.println(PASV_IP + ":" + PASV_PORT);
+                int pasvPort = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
 
                 clearByteArray(cmdString);
 
-                try (
-                        Socket PASVsocket = new Socket(PASV_IP, PASV_PORT);
-                        //get the socket input stream
-                        BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
-                ) {
+                try {
+                    Socket PASVsocket = new Socket();
+                    PASVsocket.connect(new InetSocketAddress(pasvIp,pasvPort), SOCKET_TIMEOUT);
+                    //get the socket input stream
+                    BufferedReader PASVreader = new BufferedReader(new InputStreamReader(
+                            PASVsocket.getInputStream()));
 
                     if (PASVsocket.isConnected()) {
                         System.out.print("--> RETR " + userInputArray[1] + "\n");
                         out.println("RETR " + userInputArray[1]);
 
                         String RETRresponse = reader.readLine();
-                        responseCode = RETRresponse.substring(0,3);
-
-                        if (responseCode.equals("150")) {
+                        if (processResponse(RETRresponse,pasvIp,pasvPort,userInputArray)) {
 
                             System.out.println("<-- " + RETRresponse);
 
@@ -282,59 +286,62 @@ Application command: get REMOTE
                             if (!file.exists()) {
                                 file.createNewFile();
                             }
-                            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+                            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
 
-                            while ((RETRresponse = PASVreader.readLine()) != null ) {
-                                bw.write(RETRresponse);
+                                String fileData;
+                                while ((fileData = PASVreader.readLine()) != null) {
+                                    bw.write(fileData);
+                                }
+                                System.out.println("<-- " + reader.readLine());
+                            } catch (Exception e) {
+                                System.err.println("935 Data transfer connection I/O error, closing data connection");
+                                return;
                             }
-                            bw.close();
-                            System.out.println("<-- " + reader.readLine());
-                        } else {
-                            System.out.println("930 Data transfer connection to " + PASV_IP + " on port " + PASV_PORT+" failed to open");
-                            return;
                         }
-
                     }
-                } catch (SocketException e) {
-                    System.out.println("925 Control connection I/O error, closing control connection");
+                } catch (IOException e) {
+                    System.err.println("920 Control connection to "+ pasvIp +" on port "+ pasvPort +" failed to open");
                 }
             }
-
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
     }
 
-    /* TODO:
-If connected, sends a QUIT to the server, and closes any established connection
-and then exits the program. This command is valid at any time.
+    /*
+    If connected, sends a QUIT to the server, and closes any established connection
+    and then exits the program. This command is valid at any time.
 
-FTP command: QUIT
-Application command: quit
-*/
-    private static void quit(PrintWriter out, BufferedReader reader) {
+    FTP command: QUIT
+    Application command: quit
+    */
+    private static void quit(String[] userInputArray, PrintWriter out, BufferedReader reader) {
         System.out.print("--> QUIT" + "\n");
         out.println("QUIT");
 
         try {
             String response = reader.readLine();
-            System.out.print(response + "\n");
-            System.exit(0);
+            if(processResponse(response,hostName,portNumber,userInputArray)) {
+                System.out.print(response + "\n");
+                System.exit(0);
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
 
     }
 
 
-    /* TODO:
-Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email
-address or anonymous password command must be sent.
-This typically the second command the user will enter.
+    /*
+    Sends the PASSWORD to the FTP server. For an anonymous server the user would typically enter an email
+    address or anonymous password command must be sent.
+    This typically the second command the user will enter.
 
-FTP command to server: PASS
-Application command: pw
-*/
+    FTP command to server: PASS
+    Application command: pw
+    */
     private static void enterPassword(String[] userInputArray, PrintWriter out, BufferedReader reader) {
         System.out.print("--> PASS " + userInputArray[1] + "\n");
         out.println("PASS " + userInputArray[1]);
@@ -342,110 +349,134 @@ Application command: pw
         try {
             String response = reader.readLine();
 
-            String responseCode = response.substring(0, 3);
-
-            if(responseCode.startsWith("4")) {
-                System.out.print("925 Control connection I/O error, closing control connection.");
-                System.exit(0);
+            if(processResponse(response,hostName,portNumber,userInputArray)) {
+                System.out.println("<-- " + response);
             }
-
-            System.out.println("<-- " + response);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
 
     }
 
-    /*TODO:
-Sends the username to the FTP server. The user will need to pay attention to the response code
-to determine if the password command must be sent.
-This typically the first command the user will enter.
+    /*
+    Sends the username to the FTP server. The user will need to pay attention to the response code
+    to determine if the password command must be sent.
+    This typically the first command the user will enter.
 
-FTP command to Server: USER, PASS
-Application command: user, USERNAME
-*/
+    FTP command to Server: USER, PASS
+    Application command: user, USERNAME
+    */
     private static void logIn(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+        System.out.print("--> USER " + userInputArray[1] + "\n");
+        out.println("USER " + userInputArray[1]);
 
-        if(userInputArray.length != 2) {
-            System.out.print("Invalid Username" + "\n");
-        } else {
-            System.out.print("--> USER " + userInputArray[1] + "\n");
-            out.println("USER " + userInputArray[1]);
+        try {
 
-            try {
-
-                String response = reader.readLine();
-                String responseCode = response.substring(0,3);
-
-                if(responseCode.startsWith("4")) {
-                    System.out.print("925 Control connection I/O error, closing control connection.");
-                    System.exit(0);
-                }
-
+            String response = reader.readLine();
+            if (processResponse(response,hostName,portNumber,userInputArray)) {
                 System.out.println("<-- " + response);
-
-            } catch (IOException e) {
-                e.printStackTrace();
             }
 
+        } catch (IOException e) {
+            System.err.println("998 Input error while reading commands, terminating.");
+            System.exit(1);
         }
-
     }
-//    private static void processResponse(String response, String hostName, int portNumber) {
-//
-//        String responseCode = response.substring(0,3);
-//
-//        switch (responseCode) {
-//            case "331":
-//                System.out.print("User name okay, need password.");
-//                break;
-//
-//            //When an attempt to establish the connection can't be completed within a reasonable time (say 30 seconds),
-//            // or the socket cannot be created, then print this message, replacing xxx and yyy with the
-//            // hostName and port number of the target ftp server you are trying to establish the control connection to,.
-//            case "425":
-//                System.out.print("920 Control connection to " + hostName + " on port " + portNumber + " failed to open");
-//                break;
-//
-//            //925 Control connection I/O error, closing control connection.
-//            // If at any point an error while attempting to read from, or write to, the open control connection occurs,
-//            // this message is to printed, and the socket closed/destroyed. The client is then to exit.
-//            case "test":
-//                System.out.print("925 Control connection I/O error, closing control connection.");
-//                break;
-//
-//            //930 Data transfer connection to xxx on port yyy failed to open.
-//            // This message is to be printed when a data connection cannot be established within a reasonable time
-//            // (say 30 seconds) or the socket cannot be created. The xxx and yyy are to be replaced with the
-//            // hostName and port number of the target ftp server respectively.
-//            case "test2":
-//                System.out.print("930 Data transfer connection to " + hostName + " on port " + portNumber + " failed to open");
-//                break;
-//
-//            //935 Data transfer connection I/O error, closing data connection.
-//            // If at any point an error while attempting to read (or write, but that should never be the case) from
-//            // the open data transfer connection occurs, this message is to printed, and the data transfer socket closed/destroyed.
-//            // The client is then to go back to accepting commands.
-//            // Note that this error does not trigger the closing of the command connection.
-//            case "test3":
-//                System.out.print("935 Data transfer connection I/O error, closing data connection. ");
-//                break;
-//            // 998 Input error while reading commands, terminating.
-//            // This error message is printed if an exception is thrown while the client is reading its commands
-//            // (i.e., standard input). After printing this message the client will terminate.
-//            case "test4":
-//                System.out.print("998 Input error while reading commands, terminating. ");
-//                break;
-//
-//            // Todo: 999 Processing error. yyyy.
-//            // If for some reason you detect an error that isn't described above,
-//            // print this message and replace yyyy with some appropriate text that briefly describes the error.
-//            case "test5":
-//                System.out.print("999 Processing error. ");
-//                break;
-//            default  :
-//                System.out.println("<-- " + response);
-//        }
-//    }
+
+    /* Check arguments for each FTP command
+    * i = number of args needed
+    * input = user args
+    */
+    private static boolean checkArgs(int i, String[] input) {
+        if (i != input.length) {
+            System.err.println("901 Incorrect number of arguments");
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean processResponse(String response, String hostName, int portNumber, String[] userInputArray) {
+
+        String responseCode = response.substring(0,3);
+
+        switch (responseCode) {
+            //Requested file action not taken.
+            case "450":
+                System.err.println("910 Access to local file " + userInputArray[1]+" denied.");
+                return false;
+
+            //Requested action aborted. Local error in processing.
+            case "451":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            // Could Not Connect to Server - Policy Requires SSL
+            case "534":
+                System.err.println("920 Control connection to " + hostName + " on port " + portNumber +
+                        " failed to open");
+                return false;
+
+            //Not logged in
+            case "530":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            //Fail to open file
+            case "550":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            //Requested action aborted. Page type unknown.
+            case "551":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            //Requested file action aborted. Exceeded storage allocation (for current directory or dataset).
+            case "552":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            //Requested action not taken.Insufficient storage space in system.File unavailable (e.g., file busy).
+            case "553":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            // 998 Input error while reading commands, terminating.
+            // This error message is printed if an exception is thrown while the client is reading its commands
+            // (i.e., standard input). After printing this message the client will terminate.
+            case "452":
+                System.err.println("999 Processing error. " + response);
+                return false;
+
+            // Service not available
+            case "421":
+                System.err.println("925 Control connection I/O error, closing control connection.");
+                System.exit(1);
+                break;
+
+            //When an attempt to establish the connection can't be completed within a reasonable time (say 30 seconds),
+            // or the socket cannot be created, then print this message, replacing xxx and yyy with the
+            // hostName and port number of the target ftp server you are trying to establish the control connection to,.
+            case "425":
+                System.err.println("920 Control connection to " + hostName + " on port " + portNumber +
+                        " failed to open");
+                System.exit(1);
+                break;
+
+            //925 Control connection I/O error, closing control connection.
+            // If at any point an error while attempting to read from, or write to, the open control connection occurs,
+            // this message is to printed, and the socket closed/destroyed. The client is then to exit.
+            case "426":
+                System.err.println("930 Data transfer connection to " + hostName + " on port " + portNumber +
+                        " failed to open");
+                System.exit(1);
+                break;
+
+            default  :
+                return true;
+        }
+        return true;
+    }
 }
