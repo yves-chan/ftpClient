@@ -274,10 +274,9 @@ public class CSftp {
                     Socket PASVsocket = new Socket();
                     PASVsocket.connect(new InetSocketAddress(pasvIp,pasvPort), SOCKET_TIMEOUT);
                     //get the socket input stream
-                    BufferedReader PASVreader = new BufferedReader(new InputStreamReader(
-                            PASVsocket.getInputStream()));
 
                     if (PASVsocket.isConnected()) {
+
                         System.out.print("--> RETR " + userInputArray[1] + "\n");
                         out.println("RETR " + userInputArray[1]);
 
@@ -290,15 +289,20 @@ public class CSftp {
                             if (!file.exists()) {
                                 file.createNewFile();
                             }
-                            try {
-                                BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
 
-                                String fileData;
-                                while ((fileData = PASVreader.readLine()) != null) {
-                                    bw.write(fileData);
-                                    bw.newLine();
+                            InputStream in = PASVsocket.getInputStream();
+                            FileOutputStream fileOut = new FileOutputStream(file);
+
+                            byte[] buf = new byte[4096];
+
+                            try {
+                                int length;
+                                while ((length = in.read(buf)) > 0) {
+                                    fileOut.write(buf, 0, length);
                                 }
-                                bw.flush();
+                                in.close();
+                                fileOut.close();
+                                PASVsocket.close();
                                 System.out.println("<-- " + reader.readLine());
                             } catch (Exception e) {
                                 System.out.println("935 Data transfer connection I/O error, closing data connection");
