@@ -193,7 +193,7 @@ public class CSftp {
                     Socket pasvSocket = new Socket();
                     pasvSocket.connect(new InetSocketAddress(pasvIp, pasvPort), SOCKET_TIMEOUT);
                     //get the socket input stream
-                    BufferedReader PASVreader = new BufferedReader(new InputStreamReader(
+                    BufferedReader pasVreader = new BufferedReader(new InputStreamReader(
                             pasvSocket.getInputStream()));
 
                     if (pasvSocket.isConnected()) {
@@ -202,9 +202,11 @@ public class CSftp {
 
                         System.out.println("<-- " + reader.readLine());
                         String LISTresponse;
-                        while ((LISTresponse = PASVreader.readLine()) != null) {
+                        while ((LISTresponse = pasVreader.readLine()) != null) {
                             System.out.println("<-- " + LISTresponse);
                         }
+                        pasVreader.close();
+                        pasvSocket.close();
                         System.out.println("<-- " + reader.readLine());
                     }
                 } catch (SocketException e) {
@@ -226,7 +228,6 @@ public class CSftp {
     FTP command: CWD
     Application Command: cd DIRECTORY
     */
-
     private static void cdDirectory(String[] userInputArray, PrintWriter out, BufferedReader reader) {
         System.out.print("--> CWD" + "\n");
         out.println("CWD " + userInputArray[1]);
@@ -244,7 +245,7 @@ public class CSftp {
         }
     }
 
-    /* TODO:
+    /*
     Establishes a data connection and retrieves the file indicated by REMOTE,
     saving it in a file of the same name on the local machine.
 
@@ -256,14 +257,14 @@ public class CSftp {
         out.println("PASV");
 
         try {
-            String PASVresponse = reader.readLine();
+            String pasVresponse = reader.readLine();
 
-            if (processResponse(PASVresponse,hostName,portNumber,userInputArray)) {
+            if (processResponse(pasVresponse,hostName,portNumber,userInputArray)) {
 
-                System.out.println("<-- " + PASVresponse);
+                System.out.println("<-- " + pasVresponse);
 
-                PASVresponse = PASVresponse.split("[\\(\\)]")[1];
-                String[] PASVresponseIP = PASVresponse.split(",");
+                pasVresponse = pasVresponse.split("[\\(\\)]")[1];
+                String[] PASVresponseIP = pasVresponse.split(",");
                 String pasvIp = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
                         PASVresponseIP[3];
                 int pasvPort = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
@@ -271,11 +272,11 @@ public class CSftp {
                 clearByteArray(cmdString);
 
                 try {
-                    Socket PASVsocket = new Socket();
-                    PASVsocket.connect(new InetSocketAddress(pasvIp,pasvPort), SOCKET_TIMEOUT);
+                    Socket pasVsocket = new Socket();
+                    pasVsocket.connect(new InetSocketAddress(pasvIp,pasvPort), SOCKET_TIMEOUT);
                     //get the socket input stream
 
-                    if (PASVsocket.isConnected()) {
+                    if (pasVsocket.isConnected()) {
 
                         System.out.print("--> RETR " + userInputArray[1] + "\n");
                         out.println("RETR " + userInputArray[1]);
@@ -290,7 +291,7 @@ public class CSftp {
                                 file.createNewFile();
                             }
 
-                            InputStream in = PASVsocket.getInputStream();
+                            InputStream in = pasVsocket.getInputStream();
                             FileOutputStream fileOut = new FileOutputStream(file);
 
                             byte[] buf = new byte[4096];
@@ -302,7 +303,7 @@ public class CSftp {
                                 }
                                 in.close();
                                 fileOut.close();
-                                PASVsocket.close();
+                                pasVsocket.close();
                                 System.out.println("<-- " + reader.readLine());
                             } catch (Exception e) {
                                 System.out.println("935 Data transfer connection I/O error, closing data connection");
