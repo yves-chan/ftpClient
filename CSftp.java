@@ -110,7 +110,7 @@ public class CSftp {
                             break;
 
                         case "get" :
-                            getRemote(updatedUserInputArray, out, reader);
+                            getRemote(updatedUserInputArray, out, reader, cmdString);
                             clearByteArray(cmdString);
                             break;
 
@@ -120,7 +120,7 @@ public class CSftp {
                             break;
 
                         case "dir" :
-                            showDir(out, reader);
+                            showDir(out, reader, cmdString);
                             clearByteArray(cmdString);
                             break;
 
@@ -156,7 +156,7 @@ on the server. The list is printed to standard output.
 FTP command: PASV, LIST
 Application command: dir
 */
-    private static void showDir(PrintWriter out, BufferedReader reader) {
+    private static void showDir(PrintWriter out, BufferedReader reader, byte[] cmdString) {
 
         System.out.print("--> PASV"+"\n");
         out.println("PASV");
@@ -167,36 +167,39 @@ Application command: dir
             String responseCode = PASVresponse.substring(0, 3);
 
             //processResponseCode();
+            if (responseCode.equals("227")) {
+                System.out.println("<-- " + PASVresponse);
+                //if return from PASV is 227, then parse ip and port
+                PASVresponse = PASVresponse.split("[\\(\\)]")[1];
+                String[] PASVresponseIP = PASVresponse.split(",");
+                String PASV_IP = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
+                        PASVresponseIP[3];
+                int PASV_PORT = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
 
-            System.out.println("<-- " + PASVresponse);
-            //if return from PASV is 227, then parse ip and port
-            PASVresponse = PASVresponse.split("[\\(\\)]")[1];
-            String[] PASVresponseIP = PASVresponse.split(",");
-            String PASV_IP = PASVresponseIP[0]+"."+PASVresponseIP[1]+"."+PASVresponseIP[2]+"."+
-                    PASVresponseIP[3];
-            int PASV_PORT = Integer.parseInt(PASVresponseIP[4])*256+Integer.parseInt(PASVresponseIP[5]);
+                System.out.println(PASV_IP + ":" + PASV_PORT);
 
-            System.out.println(PASV_IP + ":" +PASV_PORT);
+                clearByteArray(cmdString);
 
-            try (
-            Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
-            //get the socket input stream
-            BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
-            ) {
+                try (
+                        Socket PASVsocket = new Socket(PASV_IP, PASV_PORT);
+                        //get the socket input stream
+                        BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+                ) {
 
-                if (PASVsocket.isConnected()) {
-                    System.out.print("--> LIST" + "\n");
-                    out.println("LIST");
+                    if (PASVsocket.isConnected()) {
+                        System.out.print("--> LIST" + "\n");
+                        out.println("LIST");
 
-                    System.out.println("<-- " + reader.readLine());
-                    String LISTresponse;
-                    while ((LISTresponse = PASVreader.readLine()) != null) {
-                        System.out.println("<-- " + LISTresponse);
+                        System.out.println("<-- " + reader.readLine());
+                        String LISTresponse;
+                        while ((LISTresponse = PASVreader.readLine()) != null) {
+                            System.out.println("<-- " + LISTresponse);
+                        }
+                        System.out.println("<-- " + reader.readLine());
                     }
-                    System.out.println("<-- " + reader.readLine());
+                } catch (SocketException e) {
+                    System.out.println("925 Control connection I/O error, closing control connection");
                 }
-            } catch (SocketException e) {
-                System.out.println("lost connection");
             }
 
         } catch (IOException e) {
@@ -239,7 +242,7 @@ saving it in a file of the same name on the local machine.
 FTP command: PASV, RETR
 Application command: get REMOTE
 */
-    private static void getRemote(String[] userInputArray, PrintWriter out, BufferedReader reader) {
+    private static void getRemote(String[] userInputArray, PrintWriter out, BufferedReader reader, byte[] cmdString) {
         System.out.print("--> PASV"+"\n");
         out.println("PASV");
 
@@ -251,38 +254,59 @@ Application command: get REMOTE
             //processResponseCode();
 
             System.out.println("<-- " + PASVresponse);
+
             //if return from PASV is 227, then parse ip and port
-            PASVresponse = PASVresponse.split("[\\(\\)]")[1];
-            String[] PASVresponseIP = PASVresponse.split(",");
-            String PASV_IP = PASVresponseIP[0]+"."+PASVresponseIP[1]+"."+PASVresponseIP[2]+"."+
-                    PASVresponseIP[3];
-            int PASV_PORT = Integer.parseInt(PASVresponseIP[4])*256+Integer.parseInt(PASVresponseIP[5]);
+            if (responseCode.equals("227")) {
+                PASVresponse = PASVresponse.split("[\\(\\)]")[1];
+                String[] PASVresponseIP = PASVresponse.split(",");
+                String PASV_IP = PASVresponseIP[0] + "." + PASVresponseIP[1] + "." + PASVresponseIP[2] + "." +
+                        PASVresponseIP[3];
+                int PASV_PORT = Integer.parseInt(PASVresponseIP[4]) * 256 + Integer.parseInt(PASVresponseIP[5]);
 
-            System.out.println(PASV_IP + ":" +PASV_PORT);
+                System.out.println(PASV_IP + ":" + PASV_PORT);
 
-            try (
-            Socket PASVsocket = new Socket(PASV_IP,PASV_PORT);
-            //get the socket input stream
-            BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
-            ) {
+                clearByteArray(cmdString);
 
-                if (PASVsocket.isConnected()) {
-                    System.out.print("--> RETR " + userInputArray[1] + "\n");
-                    out.println("RETR " + userInputArray[1]);
+                try (
+                        Socket PASVsocket = new Socket(PASV_IP, PASV_PORT);
+                        //get the socket input stream
+                        BufferedReader PASVreader = new BufferedReader(new InputStreamReader(PASVsocket.getInputStream()));
+                ) {
 
-                    File file = new File(userInputArray[1]);
-                    file.createNewFile();
-                    BufferedWriter bw = new BufferedWriter(new FileWriter(file, true));
+                    if (PASVsocket.isConnected()) {
+                        System.out.print("--> RETR " + userInputArray[1] + "\n");
+                        out.println("RETR " + userInputArray[1]);
 
-                    while (PASVreader.readLine() != null) {
-                        bw.write(PASVreader.readLine());
+                        String RETRresponse = reader.readLine();
+                        responseCode = RETRresponse.substring(0,3);
+
+                        if (responseCode.equals("150")) {
+
+                            System.out.println("<-- " + RETRresponse);
+
+                            File file = new File(userInputArray[1]);
+                            if (!file.exists()) {
+                                file.createNewFile();
+                            }
+                            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+
+                            int count = 0;
+                            while (PASVreader.readLine() != null) {
+                                System.out.println(count);
+                                bw.write(PASVreader.readLine());
+                                count++;
+                            }
+                            bw.close();
+                            System.out.println("<-- " + reader.readLine());
+                        } else {
+                            System.out.println("930 Data transfer connection to " + PASV_IP + " on port " + PASV_PORT+" failed to open");
+                            return;
+                        }
+
                     }
-                    bw.flush();
-                    bw.close();
-
+                } catch (SocketException e) {
+                    System.out.println("925 Control connection I/O error, closing control connection");
                 }
-            } catch (SocketException e) {
-                System.out.println("Socket closed");
             }
 
         } catch (IOException e) {
